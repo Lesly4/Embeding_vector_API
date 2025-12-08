@@ -133,7 +133,7 @@ Click **Send**. You’ll receive a JSON response containing the vector embedding
 
 ## Using Swagger UI to Submit Queries
 
-FastAPI automatically provides a **Swagger web interface** to explore and test your API.  
+FastAPI automatically provides a **Swagger web interface** to explore and test your API.  Swagger UI is a simple way to interact with your API without using `curl` or Post
 
 1. Open your browser and go to:  
 ```
@@ -151,7 +151,7 @@ http://127.0.0.1:8000/docs
 
 4. Click **Execute**. The API response, including the generated embedding vector, will appear below.  
 
-Swagger UI is a simple way to interact with your API without using `curl` or Post
+
 
 ---
 
