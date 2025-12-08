@@ -15,6 +15,16 @@ It is designed to be:
 
 Ideal for semantic search, or any workflow requiring text embeddings.
 
+This API includes middleware that logs each request.
+
+Logged data includes:
+
+* HTTP method & URL
+* Status code
+* Timestamps
+
+Useful for debugging and auditing.
+
 ---
 
 ##  Base URL & Endpoint
@@ -105,7 +115,7 @@ This ensures your request includes the correct content type and your API key for
 
 ### Step 4: Add JSON Body
 
-Go to **Body → raw → JSON** and paste:
+Go to **Body → raw → JSON** and paste your text:
 
 ```json
 {
@@ -117,28 +127,6 @@ Go to **Body → raw → JSON** and paste:
 
 Click **Send**. You’ll receive a JSON response containing the vector embedding.
 
----
-
-##  Logging
-
-The API includes middleware that logs each request:
-
-```python
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    logger.info(f"Incoming request: {request.method} {request.url}")
-    response = await call_next(request)
-    logger.info(f"Completed request: {request.method} {request.url} - Status {response.status_code}")
-    return response
-```
-
-Logged data includes:
-
-* HTTP method & URL
-* Status code
-* Timestamps
-
-Useful for debugging and auditing.
 
 ---
 
@@ -183,7 +171,8 @@ http://127.0.0.1:8000/docs
 ```
 +-------------------+
 |  Client (curl /   |
-|  Postman / Python)|
+| Postman / Python)/|
+| Swagger UI        |
 +---------+---------+
           |
           v
