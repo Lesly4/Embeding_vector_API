@@ -1,17 +1,38 @@
-# Text-to-Vector Embedding API
+#  Text-to-Vector Embedding API
 
-This API allows you to convert **any length of text** into a vector embedding.
-It uses a clean and universal JSON-based POST request approach, avoiding URL length limits and inconvenient encoding issues.
+A simple and efficient FastAPI service for converting any length of text into a vector embedding.
 
-##  Running the API
+---
 
-Assuming your FastAPI application is running at:
+##  Overview
+
+This API allows you to convert arbitrary-length text into vector embeddings.
+It is designed to be:
+
+*  **Easy to use**
+* ⚡ **Fast** (powered by FastAPI)
+*  **Flexible** (no URL-length limits thanks to JSON body input)
+*  **API-key aware** (optional: validate user-provided API keys for tracking usage)
+
+Ideal for NLP pipelines, semantic search, ML preprocessing, or any workflow requiring text embeddings.
+
+---
+
+##  Base URL & Endpoint
+
+Assuming your FastAPI server is running locally:
 
 ```
 http://127.0.0.1:8000/
 ```
 
-and the embedding endpoint is defined as:
+Main endpoint:
+
+```
+POST /convert-text
+```
+
+Example handler:
 
 ```python
 @app.post("/convert-text")
@@ -21,11 +42,11 @@ def converter(input_data: TextInput):
 
 ---
 
-## 📄 1. Prepare Your Input Text (JSON)
+##  How to Use the API
 
-Create a JSON file containing the text you want to convert.
+### 1️⃣ Create a JSON File Containing Your Text
 
-Example: create **text.json** with your content:
+Create a file such as `text.json` and include your text:
 
 ```json
 {
@@ -33,13 +54,11 @@ Example: create **text.json** with your content:
 }
 ```
 
-You can include **very long text**—JSON fully supports multiline strings.
+JSON supports long or multiline strings as well.
 
 ---
 
-## 📤 2. Send a POST Request Using curl
-
-Use `curl` to send the JSON file to your FastAPI endpoint:
+### 2️⃣ Send a POST Request with cURL
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/convert-text" \
@@ -47,29 +66,173 @@ curl -X POST "http://127.0.0.1:8000/convert-text" \
      -d @text.json
 ```
 
-The `@text.json` syntax tells `curl`:
+`@text.json` tells `curl` to read the JSON body from the file `text.json`.
 
-> “Read the file *text.json* from the current working directory and send it as the request body.”
-
-If your JSON file is stored elsewhere, specify the full path:
+If your JSON file is located elsewhere, specify the full path:
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/convert-text" \
-     -H "Content-Type: application/json" \
-     -d @"/home/user/myfiles/text.json"
+-d @"/home/user/documents/text.json"
 ```
 
 ---
 
-## ✅ Response
+##  Using Postman to Call the `/convert-text` Endpoint
 
-The API will return the vector embedding as a JSON array.
+### Step 1: Open Postman
+
+Download Postman: [https://www.postman.com/downloads/](https://www.postman.com/downloads/)
+
+### Step 2: Create a New POST Request
+
+1. Click **New → HTTP Request**
+2. Set method: **POST**
+3. URL: `http://127.0.0.1:8000/convert-text`
+
+### Step 3: Add Headers
+
+| Key          | Value             |
+| ------------ | ----------------- |
+| Content-Type | application/json  |
+| X-API-Key    | your_api_key_here |
+
+*(Only required if your API validates API keys.)*
+
+### Step 4: Add JSON Body
+
+Go to **Body → raw → JSON** and paste:
+
+```json
+{
+  "text": "This is the text I want to convert into a vector embedding."
+}
+```
+
+### Step 5: Send Request
+
+Click **Send**. You’ll receive a JSON response containing the vector embedding.
 
 ---
 
+## 📝 Logging
 
-## 📌 Notes
+The API includes middleware that logs each request:
 
-* There is **no text size limit** because data is passed in the body, not the URL.
-* Ideal for long documents, research papers, logs, or streaming text.
+```python
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    logger.info(f"Incoming request: {request.method} {request.url}")
+    response = await call_next(request)
+    logger.info(f"Completed request: {request.method} {request.url} - Status {response.status_code}")
+    return response
+```
 
+Logged data includes:
+
+* HTTP method & URL
+* Status code
+* Timestamps
+
+Useful for debugging and auditing.
+
+---
+
+##  Setup & Installation
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/yourrepo.git
+cd yourrepo
+```
+
+### 2. Create & activate a virtual environment
+
+```bash
+python3 -m venv env
+source env/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run FastAPI
+
+```bash
+uvicorn main:app --reload
+```
+
+Swagger UI is available at:
+
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+##  Architecture Diagram
+
+```
++-------------------+
+|  Client (curl /   |
+|  Postman / Python)|
++---------+---------+
+          |
+          v
++-------------------+
+|  FastAPI Server   |
+|  (main.py)        |
++---------+---------+
+          |
+          v
++-------------------+
+|  Tokenizer +      |
+|  Embedding Model  |
++---------+---------+
+          |
+          v
++-------------------+
+|  JSON Response    |
+|  with Vector      |
++-------------------+
+```
+
+---
+
+##  Workflow Diagram
+
+```
+[User sends text JSON] 
+           |
+           v
+  [POST /convert-text endpoint]
+           |
+           v
+ [FastAPI middleware logs request]
+           |
+           v
+  [Text -> Tokenizer -> Model]
+           |
+           v
+ [Embedding vector generated]
+           |
+           v
+[FastAPI sends JSON response]
+           |
+           v
+ [Middleware logs completion]
+```
+
+---
+
+##  Contributing
+
+Contributions, issues, and feature requests are welcome.
+
+---
+
+##  License
+
+MIT License
