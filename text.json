@@ -1,0 +1,1 @@
+{"text":"This code loads a text-embedding model from the Hugging Face Transformers library and uses it to convert a sentence into a numerical vector representation This embedding is a list of numbers that captures the meaning of the text so that it can be used for tasks like similarity search classification or machine learning"}

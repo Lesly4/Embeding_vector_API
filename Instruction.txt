@@ -1,0 +1,33 @@
+This API allow you to convert your text into vector, no matter how long your text is, 
+we have provide to a simple and generalizing approac avoiding 
+URL length limits and messy encoding.
+
+Let us suppose the FastAPI is running at 
+http://127.0.0.1:8000/
+and the endpoint is 
+@app.post("/convert-text")
+def converter(input_data: TextInput):
+........
+1- Create a JSON file that contains the text to send to the FastAPI POST API 
+for being converted into vector.
+
+example 
+Create a file named text.json and put this inside (any long text;
+ JSON supports multiline strings too):
+{
+  "text": "This is the text I want to convert into a vector embedding."
+}
+
+2- Call the FastAPI POST endpoint from the terminal 
+ Using curl 
+curl -X POST "http://127.0.0.1:8000/convert-text" \
+     -H "Content-Type: application/json" \
+     -d @text.json
+
+@text.json means:
+"Read the file text.json from the current working directory."
+
+If the JSON file is somewhere else, the full path can be given 
+
+example      -d @"/home/user/myfiles/text.json"
+
