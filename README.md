@@ -10,11 +10,10 @@ This API allows you to convert arbitrary-length text into vector embeddings.
 It is designed to be:
 
 *  **Easy to use**
-* ⚡ **Fast** (powered by FastAPI)
+*  **Fast** (powered by FastAPI)
 *  **Flexible** (no URL-length limits thanks to JSON body input)
-*  **API-key aware** (optional: validate user-provided API keys for tracking usage)
 
-Ideal for NLP pipelines, semantic search, ML preprocessing, or any workflow requiring text embeddings.
+Ideal for semantic search, or any workflow requiring text embeddings.
 
 ---
 
@@ -88,14 +87,21 @@ Download Postman: [https://www.postman.com/downloads/](https://www.postman.com/d
 2. Set method: **POST**
 3. URL: `http://127.0.0.1:8000/convert-text`
 
-### Step 3: Add Headers
+### Step 3: Configure Headers and Authorization 
 
-| Key          | Value             |
-| ------------ | ----------------- |
-| Content-Type | application/json  |
-| X-API-Key    | your_api_key_here |
+1. Go to the **Headers** tab and set:
 
-*(Only required if your API validates API keys.)*
+| Key           | Value              |
+|---------------|------------------|
+| Content-Type  | application/json |
+
+2. Go to the **Authorization** tab (or alternatively, add a new header) and set:
+
+| Key       | Value              |
+|-----------|------------------|
+| X-API-Key | your_api_key_here |
+
+This ensures your request includes the correct content type and your API key for authentication.
 
 ### Step 4: Add JSON Body
 
@@ -113,7 +119,7 @@ Click **Send**. You’ll receive a JSON response containing the vector embedding
 
 ---
 
-## 📝 Logging
+##  Logging
 
 The API includes middleware that logs each request:
 
@@ -141,8 +147,8 @@ Useful for debugging and auditing.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/yourrepo.git
-cd yourrepo
+git clone https://github.com/Lesly4/Embeding_vector_API.git
+cd Embeding_vector_API
 ```
 
 ### 2. Create & activate a virtual environment
