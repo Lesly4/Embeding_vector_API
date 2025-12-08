@@ -29,7 +29,7 @@ Useful for debugging and auditing.
 
 ##  Base URL & Endpoint
 
-Assuming your FastAPI server is running locally:
+This FastAPI server is running locally at :
 
 ```
 http://127.0.0.1:8000/
@@ -39,14 +39,6 @@ Main endpoint:
 
 ```
 POST /convert-text
-```
-
-Example handler:
-
-```python
-@app.post("/convert-text")
-def converter(input_data: TextInput):
-    ...
 ```
 
 ---
@@ -224,7 +216,7 @@ http://127.0.0.1:8000/docs
 ##  Workflow Diagram
 
 ```
-[User sends text JSON] 
+  [User sends text JSON] 
            |
            v
   [POST /convert-text endpoint]
