@@ -67,7 +67,7 @@ JSON supports long or multiline strings as well.
 
 ---
 
-### 2️⃣ Send a POST Request with cURL
+### 2️⃣ Send a POST Request with CURL
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/convert-text" \
@@ -127,6 +127,31 @@ Go to **Body → raw → JSON** and paste your text:
 
 Click **Send**. You’ll receive a JSON response containing the vector embedding.
 
+
+---
+
+
+## Using Swagger UI to Submit Queries
+
+FastAPI automatically provides a **Swagger web interface** to explore and test your API.  
+
+1. Open your browser and go to:  
+```
+http://127.0.0.1:8000/docs
+```
+
+2. Find the endpoint you want to use (e.g., `/convert-text`) and click **Try it out**.  
+
+3. Enter your input in the JSON body, for example:  
+```json
+{
+  "text": "Your text to convert into a vector"
+}
+```
+
+4. Click **Execute**. The API response, including the generated embedding vector, will appear below.  
+
+Swagger UI is a simple way to interact with your API without using `curl` or Post
 
 ---
 
