@@ -43,6 +43,84 @@ POST /convert-text
 
 ---
 
+##  Local Setup (Development)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Lesly4/Embeding_vector_API.git
+cd Embeding_vector_API
+```
+
+### 2. Create & activate a virtual environment
+
+```bash
+python3 -m venv env
+source env/bin/activate
+```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run FastAPI
+
+```bash
+uvicorn main:app --reload
+```
+
+Swagger UI is available at:
+
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## 🐳 Docker Usage (Recommended)
+
+Docker allows you to run the API without installing Python or dependencies locally.
+
+### Prerequisites
+- Docker installed: https://docs.docker.com/get-docker/
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Lesly4/Embeding_vector_API.git
+cd Embeding_vector_API
+```
+
+### 2. Build the Docker image
+```bash
+docker build -t text-to-vector-api .
+```
+
+### 3. Run the container
+```bash
+docker run -p 8000:8000 text-to-vector-api
+```
+
+API available at:
+```
+http://127.0.0.1:8000
+```
+
+### 4. (Optional) Persist model cache
+```bash
+docker run -p 8000:8000 -v hf_models:/models text-to-vector-api
+```
+
+### 4. Stop the container
+```bash
+docker ps
+docker stop <CONTAINER_ID>
+```
+
+---
+
 ##  How to Use the API
 
 ### 1️⃣ Create a JSON File Containing Your Text
@@ -147,41 +225,7 @@ http://127.0.0.1:8000/docs
 
 ---
 
-##  Setup & Installation
 
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/Lesly4/Embeding_vector_API.git
-cd Embeding_vector_API
-```
-
-### 2. Create & activate a virtual environment
-
-```bash
-python3 -m venv env
-source env/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Run FastAPI
-
-```bash
-uvicorn main:app --reload
-```
-
-Swagger UI is available at:
-
-```
-http://127.0.0.1:8000/docs
-```
-
----
 
 ##  Architecture Diagram
 
