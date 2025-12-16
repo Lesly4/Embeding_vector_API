@@ -74,7 +74,7 @@ uvicorn main:app --reload
 
 #### Open your browser and go to: 
 
-```bash
+```
 http://127.0.0.1:8000/
 ```
 
