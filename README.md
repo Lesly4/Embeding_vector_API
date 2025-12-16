@@ -78,12 +78,6 @@ uvicorn main:app --reload
 http://127.0.0.1:8000/
 ```
 
-#### Swagger UI is available at:
-
-```
-http://127.0.0.1:8000/docs
-```
-
 ---
 
 ## 🐳 Docker Usage 
