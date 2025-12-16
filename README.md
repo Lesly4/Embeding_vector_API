@@ -22,6 +22,7 @@ Logged data includes:
 * HTTP method & URL
 * Status code
 * Timestamps
+* Client IP address 
 
 Useful for debugging and auditing.
 
@@ -71,6 +72,11 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
+Open your browser and go to:  
+```
+http://127.0.0.1:8000/
+``
+
 Swagger UI is available at:
 
 ```
@@ -79,7 +85,7 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## 🐳 Docker Usage (Recommended)
+## 🐳 Docker Usage 
 
 Docker allows you to run the API without installing Python or dependencies locally.
 
@@ -108,12 +114,12 @@ API available at:
 http://127.0.0.1:8000
 ```
 
-### 4. (Optional) Persist model cache
+### 4. Persist model cache (Optional)
 ```bash
 docker run -p 8000:8000 -v hf_models:/models text-to-vector-api
 ```
 
-### 4. Stop the container
+### 5. Stop the container
 ```bash
 docker ps
 docker stop <CONTAINER_ID>
@@ -123,7 +129,8 @@ docker stop <CONTAINER_ID>
 
 ##  How to Use the API
 
-### 1️⃣ Create a JSON File Containing Your Text
+
+### 1. Create a JSON File Containing Your Text
 
 Create a file such as `text.json` and include your text:
 
@@ -135,9 +142,18 @@ Create a file such as `text.json` and include your text:
 
 JSON supports long or multiline strings as well.
 
+After creating the JSON file, choose how you want to interact with the API.  
+
+
 ---
 
-### 2️⃣ Send a POST Request with CURL
+### 2. Choose the API Interaction Methods
+
+You can submit requests from the terminal using **`curl`**, use **Postman** for a graphical interface, or interact directly through the built-in **Swagger UI** provided by FastAPI.
+
+
+
+## Calling the `/convert-text` Endpoint Using curl
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/convert-text" \
@@ -155,7 +171,8 @@ If your JSON file is located elsewhere, specify the full path:
 
 ---
 
-##  Using Postman to Call the `/convert-text` Endpoint
+## Calling the `/convert-text` Endpoint Using Postman
+
 
 ### Step 1: Open Postman
 
@@ -201,16 +218,17 @@ Click **Send**. You’ll receive a JSON response containing the vector embedding
 ---
 
 
-## Using Swagger UI to Submit Queries
+## Calling the `/convert-text` Endpoint Using Swagger UI
 
-FastAPI automatically provides a **Swagger web interface** to explore and test your API.  Swagger UI is a simple way to interact with your API without using `curl` or Post
+
+FastAPI automatically provides a **Swagger web interface** to explore and test an API.  Swagger UI is a simple way to interact with an API without using `curl` or Post
 
 1. Open your browser and go to:  
 ```
 http://127.0.0.1:8000/docs
 ```
 
-2. Find the endpoint you want to use (e.g., `/convert-text`) and click **Try it out**.  
+2. Find the endpoint you want to use (e.g., `/convert-text` in this case) and click **Try it out**.  
 
 3. Enter your input in the JSON body, for example:  
 ```json
@@ -232,8 +250,8 @@ http://127.0.0.1:8000/docs
 ```
 +-------------------+
 |  Client (curl /   |
-| Postman / Python)/|
-| Swagger UI        |
+| Postman /         |
+| Swagger UI )       |
 +---------+---------+
           |
           v
