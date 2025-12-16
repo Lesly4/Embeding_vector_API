@@ -72,12 +72,13 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-Open your browser and go to:  
-```
-http://127.0.0.1:8000/
-``
+#### Open your browser and go to: 
 
-Swagger UI is available at:
+```bash
+http://127.0.0.1:8000/
+```
+
+#### Swagger UI is available at:
 
 ```
 http://127.0.0.1:8000/docs
@@ -90,6 +91,7 @@ http://127.0.0.1:8000/docs
 Docker allows you to run the API without installing Python or dependencies locally.
 
 ### Prerequisites
+
 - Docker installed: https://docs.docker.com/get-docker/
 
 ### 1. Clone the repository
@@ -251,7 +253,7 @@ http://127.0.0.1:8000/docs
 +-------------------+
 |  Client (curl /   |
 | Postman /         |
-| Swagger UI )       |
+| Swagger UI )      |
 +---------+---------+
           |
           v
