@@ -72,12 +72,6 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-#### Open your browser and go to: 
-
-```
-http://127.0.0.1:8000/
-```
-
 ---
 
 ## 🐳 Docker Usage 
@@ -154,6 +148,7 @@ You can submit requests from the terminal using **`curl`**, use **Postman** for 
 ```bash
 curl -X POST "http://127.0.0.1:8000/convert-text" \
      -H "Content-Type: application/json" \
+     -H "My-API-Key: your-api-key-value" \
      -d @text.json
 ```
 
