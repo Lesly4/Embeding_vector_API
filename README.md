@@ -11,7 +11,7 @@ It is designed to be:
 
 *  **Easy to use**
 *  **Fast** (powered by FastAPI)
-*  **Flexible** (no URL-length limits thanks to JSON body input)
+*  **Flexible** (supports JSON, plain text, and PDF inputs)
 
 Ideal for semantic search, or any workflow requiring text embeddings.
 
@@ -119,10 +119,27 @@ docker stop <CONTAINER_ID>
 
 ##  How to Use the API
 
+The API accepts text input in **JSON**, **plain text**, or **PDF**.
 
-### 1. Create a JSON File Containing Your Text
 
-Create a file such as `text.json` and include your text:
+### Choose the API Interaction Methods
+
+You can submit requests from the terminal using **`curl`**, use **Postman** for a graphical interface, or interact directly through the built-in **Swagger UI** provided by FastAPI.
+
+## Calling the `/convert-text` Endpoint Using curl
+
+```bash
+curl -X POST "http://127.0.0.1:8000/convert-text" \
+     -H "Content-Type: application/json" \
+     -H "My-API-Key: your-api-key-value-here" \
+     -d @text.json
+```
+
+
+
+### JSON Input
+
+Create `text.json`:
 
 ```json
 {
@@ -130,20 +147,7 @@ Create a file such as `text.json` and include your text:
 }
 ```
 
-JSON supports long or multiline strings as well.
-
-After creating the JSON file, choose how you want to interact with the API.  
-
-
----
-
-### 2. Choose the API Interaction Methods
-
-You can submit requests from the terminal using **`curl`**, use **Postman** for a graphical interface, or interact directly through the built-in **Swagger UI** provided by FastAPI.
-
-
-
-## Calling the `/convert-text` Endpoint Using curl
+Send with curl:
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/convert-text" \
@@ -152,12 +156,31 @@ curl -X POST "http://127.0.0.1:8000/convert-text" \
      -d @text.json
 ```
 
-`@text.json` tells `curl` to read the JSON body from the file `text.json`.
+`@text.json` tells `curl` to read the JSON body from the file `text.json` in the current working directory.
 
 If your JSON file is located elsewhere, specify the full path:
 
 ```bash
 -d @"/home/user/documents/text.json"
+```
+
+
+### Plain Text Input
+
+```bash
+curl -X POST "http://127.0.0.1:8000/convert-text" \
+     -H "Content-Type: text/plain" \
+     -H "My-API-Key: your-api-key-value" \
+     --data "This is my plain text input for embedding."
+```
+
+### PDF Input
+
+```bash
+curl -X POST "http://127.0.0.1:8000/convert-text" \
+     -H "Content-Type: application/pdf" \
+     -H "My-API-Key: your-api-key-value" \
+     --data-binary @ML.pdf
 ```
 
 ---
@@ -179,27 +202,27 @@ Download Postman: [https://www.postman.com/downloads/](https://www.postman.com/d
 
 1. Go to the **Headers** tab and set:
 
-| Key           | Value              |
-|---------------|------------------|
-| Content-Type  | application/json |
+| Key           | Value                   |
+|---------------|-------------------------|
+| Content-Type  |application/json/text/pdf|
 
 2. Go to the **Authorization** tab (or alternatively, add a new header) and set:
 
-| Key       | Value              |
-|-----------|------------------|
-| X-API-Key | your_api_key_here |
+| Key       | Value                    |
+|-----------|--------------------------|
+| My-API-Key | your_api_key_value_here |
 
 This ensures your request includes the correct content type and your API key for authentication.
 
-### Step 4: Add JSON Body
+### Step 4: Set body type
 
-Go to **Body → raw → JSON** and paste your text:
 
-```json
-{
-  "text": "This is the text I want to convert into a vector embedding."
-}
-```
+3. Set body type:
+
+* **JSON** : *Body → raw → JSON*
+* **Plain text** : *Body → raw → Text*
+* **PDF** :  *Body →  binary → select PDF file*
+
 
 ### Step 5: Send Request
 
@@ -209,7 +232,7 @@ Click **Send**. You’ll receive a JSON response containing the vector embedding
 ---
 
 
-## Calling the `/convert-text` Endpoint Using Swagger UI
+## Calling the `/convert-text` Endpoint Using Swagger UI (only for json body)
 
 
 FastAPI automatically provides a **Swagger web interface** to explore and test an API.  Swagger UI is a simple way to interact with an API without using `curl` or Post

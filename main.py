@@ -1,59 +1,78 @@
-from fastapi import FastAPI, Request
-from pydantic import BaseModel
+from fastapi import FastAPI, Request, HTTPException, Body
 from transformers import AutoTokenizer, AutoModel
-import torch
-from database import Base, engine
 from logging_config import logger
+from typing import Any
+import pdfplumber
+import torch
+import io
 
-# Create tables if they don't exist
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Text-to-Vector Embedding API")
 
-# Load tokenizer and model once
 tokenizer = AutoTokenizer.from_pretrained("intfloat/e5-base")
 model = AutoModel.from_pretrained("intfloat/e5-base")
 
 
-class TextInput(BaseModel):
-    text: str
-
-
-# ------------------- API Endpoint ------------------- #
 @app.post("/convert-text")
-def convert_text(input_data: TextInput, request: Request):
+async def convert_text(
+    request: Request,
+    _: Any = Body(None)  # ← REQUIRED for Swagger / JSON
+):
     try:
-        tokens = tokenizer(input_data.text, return_tensors="pt")
+        content_type = request.headers.get("content-type", "")
+
+        if "application/json" in content_type:
+            body = await request.json()
+            text = body.get("text")
+            if not text:
+                raise HTTPException(400, "Missing 'text' field")
+
+        elif "text/plain" in content_type:
+            text = (await request.body()).decode("utf-8")
+
+        elif "application/pdf" in content_type:
+            pdf_bytes = await request.body()
+            text = ""
+            with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+                for page in pdf.pages:
+                    if page.extract_text():
+                        text += page.extract_text() + "\n"
+
+            if not text.strip():
+                raise HTTPException(400, "No extractable text in PDF")
+
+        else:
+            raise HTTPException(415, f"Unsupported Content-Type: {content_type}")
+
+        tokens = tokenizer(text, return_tensors="pt", truncation=True)
         with torch.no_grad():
             vector = model(**tokens).last_hidden_state.mean(dim=1)
 
         return {
-            "Your text": input_data.text,
-            "The resulting vector shape is": tuple(vector.shape),
-            "Embedding-Vector": vector.tolist()[0]
+            "text_length": len(text),
+            "vector_shape": tuple(vector.shape),
+            "embedding": vector.tolist()[0]
         }
-    except Exception as e:
-        return {"error": str(e)}
 
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 # ------------------- Middleware ------------------- #
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    # Extract client IP (supports X-Forwarded-For if behind a proxy)
     forwarded = request.headers.get("X-Forwarded-For")
     client_ip = forwarded.split(",")[0] if forwarded else request.client.host
 
-    # Extract API key if provided
     api_key = request.headers.get("My-API-Key")
 
-    # Log incoming request
     logger.info(
         f"Incoming request | ClientIP={client_ip} | Method={request.method} | Endpoint={request.url.path} | API_KEY={api_key}"
     )
 
     response = await call_next(request)
 
-    # Log completed request
     logger.info(
         f"Completed request | ClientIP={client_ip} | Method={request.method} | Endpoint={request.url.path} | Status={response.status_code} | API_KEY={api_key}"
     )
