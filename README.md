@@ -74,7 +74,7 @@ uvicorn main:app --reload
 
 ---
 
-## 🐳 Docker Usage 
+##  Docker Usage 
 
 Docker allows you to run the API without installing Python or dependencies locally.
 
