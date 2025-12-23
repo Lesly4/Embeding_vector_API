@@ -74,7 +74,7 @@ uvicorn main:app --reload
 
 ---
 
-## 🐳 Docker Usage 
+## Docker Usage 
 
 Docker allows you to run the API without installing Python or dependencies locally.
 
@@ -99,20 +99,83 @@ docker build -t text-to-vector-api .
 docker run -p 8000:8000 text-to-vector-api
 ```
 
-API available at:
-```
-http://127.0.0.1:8000
+### 4. Persistent Logs with a Bind Mount
+
+To ensure API logs are **persisted outside the Docker container** and not lost when the container stops or is rebuilt, this project uses a **bind mount**.
+
+A bind mount maps a directory on the host machine to a directory inside the container, allowing logs to be written directly to the host filesystem.
+
+#### Why a Bind Mount?
+
+- Logs remain available even if the container is stopped or deleted.
+- Easy to inspect logs directly from the host machine.
+- Ideal for development and debugging.
+- No Docker-managed volumes required.
+
+
+#### Run the Container with a Bind Mount
+
+```bash
+docker run -p 8000:8000 \
+  -v $(pwd)/logs:/app/logs \
+  text-to-vector-api
 ```
 
-### 4. Persist model cache (Optional)
-```bash
-docker run -p 8000:8000 -v hf_models:/models text-to-vector-api
-```
+**Explanation:**
+
+- /app/logs → directory inside the container where logs are written.
+
+- ./logs → directory on the host where logs are persisted.
+
 
 ### 5. Stop the container
 ```bash
 docker ps
 docker stop <CONTAINER_ID>
+```
+
+##### Inspecting the Contents of a Running Container
+
+
+You can inspect what is inside a running container by opening an interactive shell.
+
+**Step 1**: List Running Containers
+
+```bash
+docker ps
+```
+
+
+**Step 2**: Open a Shell Inside the Container
+
+
+```bash
+docker exec -it <CONTAINER_ID> /bin/bash
+```
+
+If bash is not available, use:
+
+
+```bash
+docker exec -it <CONTAINER_ID> /bin/sh
+```
+
+**Step 3**: Explore the Container Filesystem
+
+Once inside the container, you can inspect files normally:
+
+```bash
+ls
+cd /app/logs
+ls
+cat api-YYYY-MM-DD.log
+```
+
+
+**Step 4**: Exit the Container
+
+```bash
+exit
 ```
 
 ---
