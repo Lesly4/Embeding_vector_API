@@ -74,7 +74,11 @@ uvicorn main:app --reload
 
 ---
 
+<<<<<<< HEAD
 ## Docker Usage 
+=======
+##  Docker Usage 
+>>>>>>> fd0e0813d7d4784a3718954a12dad6407ac4dbb0
 
 Docker allows you to run the API without installing Python or dependencies locally.
 
