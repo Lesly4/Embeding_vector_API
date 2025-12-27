@@ -1,41 +1,65 @@
-from fastapi import FastAPI, Request, HTTPException, Body
+from fastapi import FastAPI, Request, HTTPException, Body, UploadFile, File
 from fastapi.responses import JSONResponse
 from transformers import AutoTokenizer, AutoModel
 from logging_config import access_logger, error_logger
-from typing import Any
+from typing import Any, List
 import pdfplumber
 import torch
 import io
+import asyncio
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+# ------------------- APP ------------------- #
 app = FastAPI(title="Text-to-Vector Embedding API")
 
+# ------------------- MODEL ------------------- #
 tokenizer = AutoTokenizer.from_pretrained("intfloat/e5-base")
 model = AutoModel.from_pretrained("intfloat/e5-base")
+model.eval()
 
+# ------------------- TEXT SPLITTER ------------------- #
+text_splitter = RecursiveCharacterTextSplitter(
+    separators=["\n\n", "\n", " ", ""],
+    chunk_size=1000,
+    chunk_overlap=200,
+    length_function=len,
+)
 
+# ------------------- EMBED CHUNK (THREAD SAFE) ------------------- #
+async def embed_chunk(chunk: str) -> torch.Tensor:
+    loop = asyncio.get_running_loop()
+
+    def sync_embed():
+        tokens = tokenizer(chunk, return_tensors="pt", truncation=True)
+        with torch.no_grad():
+            return model(**tokens).last_hidden_state.mean(dim=1)
+
+    return await loop.run_in_executor(None, sync_embed)
+
+# ------------------- ENDPOINT ------------------- #
 @app.post("/convert-text")
 async def convert_text(
     request: Request,
     _: Any = Body(None)  # Required for Swagger JSON support
 ):
     try:
-        # Normalize Content-Type
         content_type = request.headers.get("content-type", "").split(";")[0].strip()
+        text = ""
 
         # ---------- JSON ----------
         if content_type == "application/json":
             body = await request.json()
             text = body.get("text")
             if not text:
-                raise HTTPException(status_code=400, detail="Missing 'text' field")
+                raise HTTPException(400, "Missing 'text' field")
 
         # ---------- RAW TEXT ----------
         elif content_type == "text/plain":
             text = (await request.body()).decode("utf-8").strip()
             if not text:
-                raise HTTPException(status_code=400, detail="Empty text body")
+                raise HTTPException(400, "Empty text body")
 
-        # ---------- PDF ----------
+        # ---------- RAW PDF ----------
         elif content_type == "application/pdf":
             pdf_bytes = await request.body()
             text = ""
@@ -46,37 +70,52 @@ async def convert_text(
                         text += page_text + "\n"
             if not text.strip():
                 raise HTTPException(status_code=400, detail="No extractable text found in PDF")
+          
 
         # ---------- UNSUPPORTED ----------
         else:
-            raise HTTPException(status_code=415, detail=f"Unsupported Content-Type: {content_type}")
+            raise HTTPException(
+                415,
+                f"Unsupported Content-Type: {content_type}"
+            )
 
-        # ---------- EMBEDDING ----------
-        tokens = tokenizer(text, return_tensors="pt", truncation=True)
-        with torch.no_grad():
-            vector = model(**tokens).last_hidden_state.mean(dim=1)
+        if not text.strip():
+            raise HTTPException(400, "No extractable text found")
+
+        # ---------- SPLIT ----------
+        chunks: List[str] = text_splitter.split_text(text)
+        if not chunks:
+            raise HTTPException(400, "Text could not be split")
+
+        # ---------- PARALLEL EMBEDDING ----------
+        embeddings = await asyncio.gather(
+            *[embed_chunk(chunk) for chunk in chunks]
+        )
+
+        chunk_tensor = torch.vstack(embeddings)
+        document_embedding = chunk_tensor.mean(dim=0)
 
         return {
-            "text_length": len(text),
-            "vector_shape": tuple(vector.shape),
-            "embedding": vector.tolist()[0]
+            "num_chunks": len(chunks),
+            "chunk_embedding_shape": tuple(chunk_tensor.shape),
+            "document_embedding": document_embedding.tolist()
         }
 
+    # ---------- CLIENT ERRORS ----------
     except HTTPException as e:
-        # Log all client errors
         error_logger.warning(
-            f"Client error | Path={request.url.path} | Status={e.status_code} | Detail={e.detail}"
+            f"Client error | Path={request.url.path} | "
+            f"Status={e.status_code} | Detail={e.detail}"
         )
         raise
 
+    # ---------- SERVER ERRORS ----------
     except Exception as e:
-        # Log all server errors
         error_logger.error(
             f"Server error | Path={request.url.path} | Error={str(e)}",
             exc_info=True
         )
-        raise HTTPException(status_code=500, detail="Internal server error")
-
+        raise HTTPException(500, "Internal server error")
 
 # ------------------- MIDDLEWARE ------------------- #
 @app.middleware("http")
@@ -92,28 +131,26 @@ async def log_requests(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception as e:
-        # Middleware catches errors not handled in routes
         error_logger.error(
             f"Unhandled middleware error | IP={client_ip} | Method={request.method} | "
-            f"Path={request.url.path} | API_KEY={api_key} | Error={str(e)}",
+            f"Path={request.url.path} | Error={str(e)}",
             exc_info=True
         )
         raise
 
     access_logger.info(
         f"Completed | IP={client_ip} | Method={request.method} | "
-        f"Path={request.url.path} | Status={response.status_code} | API_KEY={api_key}"
+        f"Path={request.url.path} | Status={response.status_code}"
     )
 
     return response
 
-
-# ------------------- GLOBAL EXCEPTION HANDLER ------------------- #
+# ------------------- GLOBAL HTTP EXCEPTION ------------------- #
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    # Log any HTTPExceptions not caught in route
     error_logger.warning(
-        f"Global HTTPException | Path={request.url.path} | Status={exc.status_code} | Detail={exc.detail}"
+        f"HTTPException | Path={request.url.path} | "
+        f"Status={exc.status_code} | Detail={exc.detail}"
     )
     return JSONResponse(
         status_code=exc.status_code,
