@@ -33,7 +33,7 @@ Useful for debugging and auditing.
 This FastAPI server is running locally at :
 
 ```
-http://127.0.0.1:8000/
+http://localhost:8000/
 ```
 
 Main endpoint:
@@ -74,11 +74,9 @@ uvicorn main:app --reload
 
 ---
 
-<<<<<<< HEAD
+
 ## Docker Usage 
-=======
-##  Docker Usage 
->>>>>>> fd0e0813d7d4784a3718954a12dad6407ac4dbb0
+
 
 Docker allows you to run the API without installing Python or dependencies locally.
 
@@ -196,7 +194,7 @@ You can submit requests from the terminal using **`curl`**, use **Postman** for 
 ## Calling the `/convert-text` Endpoint Using curl
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/convert-text" \
+curl -X POST "http://localhost:8000/convert-text" \
      -H "Content-Type: application/json" \
      -H "My-API-Key: your-api-key-value-here" \
      -d @text.json
@@ -217,7 +215,7 @@ Create `text.json`:
 Send with curl:
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/convert-text" \
+curl -X POST "http://localhost:8000/convert-text" \
      -H "Content-Type: application/json" \
      -H "My-API-Key: your-api-key-value" \
      -d @text.json
@@ -235,7 +233,7 @@ If your JSON file is located elsewhere, specify the full path:
 ### Plain Text Input
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/convert-text" \
+curl -X POST "http://localhost:8000/convert-text" \
      -H "Content-Type: text/plain" \
      -H "My-API-Key: your-api-key-value" \
      --data "This is my plain text input for embedding."
@@ -244,7 +242,7 @@ curl -X POST "http://127.0.0.1:8000/convert-text" \
 ### PDF Input
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/convert-text" \
+curl -X POST "http://localhost:8000/convert-text" \
      -H "Content-Type: application/pdf" \
      -H "My-API-Key: your-api-key-value" \
      --data-binary @ML.pdf
@@ -263,7 +261,7 @@ Download Postman: [https://www.postman.com/downloads/](https://www.postman.com/d
 
 1. Click **New → HTTP Request**
 2. Set method: **POST**
-3. URL: `http://127.0.0.1:8000/convert-text`
+3. URL: `http://localhost:8000/convert-text`
 
 ### Step 3: Configure Headers and Authorization 
 
@@ -306,7 +304,7 @@ FastAPI automatically provides a **Swagger web interface** to explore and test a
 
 1. Open your browser and go to:  
 ```
-http://127.0.0.1:8000/docs
+http://localhost:8000/docs
 ```
 
 2. Find the endpoint you want to use (e.g., `/convert-text` in this case) and click **Try it out**.  
