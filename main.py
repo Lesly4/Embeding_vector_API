@@ -158,13 +158,14 @@ async def convert_text(request: Request, _: Any = Body(None)):
 
                 for group in structured_chunks:
                     for chunk in group:
-                        text = chunk.get("text", "").strip()
-                        if text:
-                            chunks.append(text)
-                            chunk_metadata.append({
-                                "page": chunk.get("page"),
-                                "header": chunk.get("header"),
-                            })
+                        if "content" in list(chunk.keys()):
+                            text = chunk["content"]
+                            if text:
+                                chunks.append(text)
+                                chunk_metadata.append({
+                                    "page": chunk["page"],
+                                    "topic": chunk["topic"],
+                                })
             finally:
                 os.remove(pdf_path)
 
