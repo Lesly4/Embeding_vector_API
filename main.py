@@ -6,14 +6,17 @@ from typing import Any, List
 import pdfplumber
 import torch
 import io
+import tempfile
+import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pdf_chunker_for_rag import CleanHybridPDFChunker
 
 # ============================================================
 # CONFIG
 # ============================================================
 
-MAX_BODY_SIZE = 15 * 1024 * 1024  # 15 MB (HTTP payload)
-MAX_TEXT_SIZE = 15 * 1024 * 1024  # 15 MB (extracted text)
+MAX_BODY_SIZE = 15 * 1024 * 1024  # 15 MB
+MAX_TEXT_SIZE = 15 * 1024 * 1024  # 15 MB
 
 # ============================================================
 # APP
@@ -30,7 +33,7 @@ model = AutoModel.from_pretrained("intfloat/e5-base")
 model.eval()
 
 # ============================================================
-# TEXT SPLITTER
+# CHUNKERS
 # ============================================================
 
 text_splitter = RecursiveCharacterTextSplitter(
@@ -40,30 +43,25 @@ text_splitter = RecursiveCharacterTextSplitter(
     length_function=len,
 )
 
+pdf_chunker = CleanHybridPDFChunker()
+
 # ============================================================
-# MIDDLEWARE — HARD LIMIT (15 MB)
+# MIDDLEWARE — HARD LIMIT
 # ============================================================
 
 @app.middleware("http")
 async def limit_request_size(request: Request, call_next):
     content_length = request.headers.get("content-length")
-
     if content_length and int(content_length) > MAX_BODY_SIZE:
-        error_logger.warning(
-            f"Payload too large | IP={request.client.host if request.client else 'unknown'} "
-            f"| Size={content_length} Bytes"
-        )
         return JSONResponse(
             status_code=413,
-            content={"detail": "Payload too large. Maximum allowed size is 15 MB."}
+            content={"detail": "Payload too large. Max 15 MB."}
         )
-
     return await call_next(request)
 
 # ============================================================
 # LOGGING MIDDLEWARE
 # ============================================================
-
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     forwarded = request.headers.get("x-forwarded-for")
@@ -97,6 +95,7 @@ async def log_requests(request: Request, call_next):
 
     return response
 
+
 # ============================================================
 # ENDPOINT
 # ============================================================
@@ -105,95 +104,111 @@ async def log_requests(request: Request, call_next):
 async def convert_text(request: Request, _: Any = Body(None)):
     try:
         content_type = request.headers.get("content-type", "").split(";")[0].strip()
-        text = ""
+        chunks: List[str] = []
+        chunk_metadata = []
 
         # ---------------- JSON ----------------
         if content_type == "application/json":
             body = await request.json()
             text = body.get("text")
             if not text:
-                raise HTTPException(400, "Missing 'text' field")
+                raise HTTPException(400, "Missing 'text'")
+            chunks = text_splitter.split_text(text)
 
         # ---------------- TEXT ----------------
         elif content_type == "text/plain":
             raw = await request.body()
             text = raw.decode("utf-8").strip()
             if not text:
-                raise HTTPException(400, "Empty text body")
+                raise HTTPException(400, "Empty body")
+            chunks = text_splitter.split_text(text)
 
         # ---------------- PDF ----------------
         elif content_type == "application/pdf":
             pdf_bytes = await request.body()
-            with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-                for page in pdf.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        text += page_text + "\n"
 
-            if not text.strip():
+            # Save PDF to temp file (chunker expects a path)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(pdf_bytes)
+                pdf_path = tmp.name
+
+            try:
+                structured_chunks = pdf_chunker.strategic_header_chunking(
+                    pdf_path=pdf_path,
+                    target_words_per_chunk=1000
+                )
+
+                for i, chunk in enumerate(structured_chunks):
+                    text = chunk.get("text", "").strip()
+                    if text:
+                        chunks.append(text)
+                        chunk_metadata.append({
+                            "page": chunk.get("page"),
+                            "header": chunk.get("header"),
+                        })
+            finally:
+                os.remove(pdf_path)
+
+            if not chunks:
                 raise HTTPException(400, "No extractable text found in PDF")
 
         # ---------------- UNSUPPORTED ----------------
         else:
-            raise HTTPException(
-                415, f"Unsupported Content-Type: {content_type}"
-            )
+            raise HTTPException(415, f"Unsupported Content-Type: {content_type}")
 
         # ====================================================
-        # TEXT SIZE LIMIT (AFTER EXTRACTION)
+        # TEXT SIZE LIMIT
         # ====================================================
 
-        if len(text.encode("utf-8")) > MAX_TEXT_SIZE:
-            raise HTTPException(
-                status_code=413,
-                detail="Extracted text exceeds the maximum allowed size of 15 MB",
-            )
+        total_bytes = sum(len(c.encode("utf-8")) for c in chunks)
+        if total_bytes > MAX_TEXT_SIZE:
+            raise HTTPException(413, "Extracted text exceeds 15 MB")
 
         # ====================================================
-        # SPLIT
-        # ====================================================
-
-        chunks: List[str] = text_splitter.split_text(text)
-        if not chunks:
-            raise HTTPException(400, "Text could not be split into chunks")
-
-        # ====================================================
-        #  BATCHED EMBEDDING
+        # BATCHED EMBEDDING
         # ====================================================
 
         tokens = tokenizer(
             chunks,
             return_tensors="pt",
             padding=True,
-            truncation=False,
-            max_length=512
+            truncation=True,
+            max_length=512,
         )
 
         with torch.no_grad():
             chunk_embeddings = model(**tokens).last_hidden_state.mean(dim=1)
+        #document_embedding = chunk_embeddings.mean(dim=0)
+        # ====================================================
+        # MAP RESULTS
+        # ====================================================
 
-        document_embedding = chunk_embeddings.mean(dim=0)
+       
+        metadata_list = chunk_metadata if chunk_metadata else [None] * len(chunks)
+        results = [
+            {
+                "Chunk_index": i,
+                "Text": chunk,
+                "Number_characters": len(chunk),
+                "Number_bytes": len(chunk.encode("utf-8")),
+                "Metadata": meta,
+                "Embedding": emb.tolist(),
+            }
+            for i, (chunk, emb, meta) in enumerate(zip(chunks, chunk_embeddings, metadata_list))
+        ]
 
         return {
-            "num_chunks": len(chunks),
-            "chunk_embedding_shape": tuple(chunk_embeddings.shape),
-            "document_embedding": document_embedding.tolist(),
+            "Number_chunks": len(results),
+            "Embedding_dim": chunk_embeddings.shape[1],
+            "Chunks": results,
         }
+        
 
-    # ---------------- CLIENT ERRORS ----------------
-    except HTTPException as e:
-        error_logger.warning(
-            f"Client error | Path={request.url.path} | "
-            f"Status={e.status_code} | Detail={e.detail}"
-        )
+
+    except HTTPException:
         raise
-
-    # ---------------- SERVER ERRORS ----------------
     except Exception as e:
-        error_logger.error(
-            f"Server error | Path={request.url.path} | Error={str(e)}",
-            exc_info=True,
-        )
+        error_logger.error(str(e), exc_info=True)
         raise HTTPException(500, "Internal server error")
 
 # ============================================================
@@ -202,10 +217,6 @@ async def convert_text(request: Request, _: Any = Body(None)):
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    error_logger.warning(
-        f"HTTPException | Path={request.url.path} | "
-        f"Status={exc.status_code} | Detail={exc.detail}"
-    )
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.detail},
