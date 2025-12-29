@@ -62,6 +62,7 @@ async def limit_request_size(request: Request, call_next):
 # ============================================================
 # LOGGING MIDDLEWARE
 # ============================================================
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     forwarded = request.headers.get("x-forwarded-for")
@@ -95,6 +96,21 @@ async def log_requests(request: Request, call_next):
 
     return response
 
+# ============================================================
+# EMBEDDING FUNCTION
+# ============================================================
+
+def embed_chunks(chunks: List[str]) -> torch.Tensor:
+    tokens = tokenizer(
+        chunks,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=512,
+    )
+    with torch.no_grad():
+        chunk_embeddings = model(**tokens).last_hidden_state.mean(dim=1)
+    return chunk_embeddings
 
 # ============================================================
 # ENDPOINT
@@ -113,12 +129,16 @@ async def convert_text(request: Request, _: Any = Body(None)):
             text = body.get("text")
             if not text:
                 raise HTTPException(400, "Missing 'text'")
+            text = text.strip() 
             chunks = text_splitter.split_text(text)
 
         # ---------------- TEXT ----------------
         elif content_type == "text/plain":
             raw = await request.body()
-            text = raw.decode("utf-8").strip()
+            try:
+                text = raw.decode("utf-8").strip()
+            except UnicodeDecodeError:
+                raise HTTPException(400, "Invalid UTF-8 text encoding")
             if not text:
                 raise HTTPException(400, "Empty body")
             chunks = text_splitter.split_text(text)
@@ -126,8 +146,6 @@ async def convert_text(request: Request, _: Any = Body(None)):
         # ---------------- PDF ----------------
         elif content_type == "application/pdf":
             pdf_bytes = await request.body()
-
-            # Save PDF to temp file (chunker expects a path)
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 tmp.write(pdf_bytes)
                 pdf_path = tmp.name
@@ -138,14 +156,15 @@ async def convert_text(request: Request, _: Any = Body(None)):
                     target_words_per_chunk=1000
                 )
 
-                for i, chunk in enumerate(structured_chunks):
-                    text = chunk.get("text", "").strip()
-                    if text:
-                        chunks.append(text)
-                        chunk_metadata.append({
-                            "page": chunk.get("page"),
-                            "header": chunk.get("header"),
-                        })
+                for group in structured_chunks:
+                    for chunk in group:
+                        text = chunk.get("text", "").strip()
+                        if text:
+                            chunks.append(text)
+                            chunk_metadata.append({
+                                "page": chunk.get("page"),
+                                "header": chunk.get("header"),
+                            })
             finally:
                 os.remove(pdf_path)
 
@@ -168,23 +187,12 @@ async def convert_text(request: Request, _: Any = Body(None)):
         # BATCHED EMBEDDING
         # ====================================================
 
-        tokens = tokenizer(
-            chunks,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=512,
-        )
+        chunk_embeddings = embed_chunks(chunks)
 
-        with torch.no_grad():
-            chunk_embeddings = model(**tokens).last_hidden_state.mean(dim=1)
-        #document_embedding = chunk_embeddings.mean(dim=0)
         # ====================================================
         # MAP RESULTS
         # ====================================================
 
-       
-        metadata_list = chunk_metadata if chunk_metadata else [None] * len(chunks)
         results = [
             {
                 "Chunk_index": i,
@@ -194,7 +202,9 @@ async def convert_text(request: Request, _: Any = Body(None)):
                 "Metadata": meta,
                 "Embedding": emb.tolist(),
             }
-            for i, (chunk, emb, meta) in enumerate(zip(chunks, chunk_embeddings, metadata_list))
+            for i, (chunk, emb, meta) in enumerate(
+                zip(chunks, chunk_embeddings, chunk_metadata + [None]*len(chunks))
+            )
         ]
 
         return {
@@ -202,8 +212,6 @@ async def convert_text(request: Request, _: Any = Body(None)):
             "Embedding_dim": chunk_embeddings.shape[1],
             "Chunks": results,
         }
-        
-
 
     except HTTPException:
         raise
