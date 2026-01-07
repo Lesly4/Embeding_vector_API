@@ -3,14 +3,33 @@ from logging.handlers import TimedRotatingFileHandler
 import os
 from datetime import datetime
 
-# ------------------ LOG DIRECTORY ------------------ #
-LOG_DIR = "logs"
-os.makedirs(LOG_DIR, exist_ok=True)
+# ============================================================
+# LOG DIRECTORIES
+# ============================================================
+
+BASE_LOG_DIR = "logs"
+
+ACCESS_LOG_DIR = os.path.join(BASE_LOG_DIR, "access")
+ERROR_LOG_DIR = os.path.join(BASE_LOG_DIR, "error")
+
+os.makedirs(ACCESS_LOG_DIR, exist_ok=True)
+os.makedirs(ERROR_LOG_DIR, exist_ok=True)
+
+
+# ============================================================
+# LOG FILE NAMES (daily)
+# ============================================================
 
 date_str = datetime.now().strftime("%Y-%m-%d")
 
-ACCESS_LOG_FILE = os.path.join(LOG_DIR, f"access-{date_str}.log")
-ERROR_LOG_FILE = os.path.join(LOG_DIR, f"error-{date_str}.log")
+ACCESS_LOG_FILE = os.path.join(
+    ACCESS_LOG_DIR, f"access-{date_str}.log"
+)
+ERROR_LOG_FILE = os.path.join(
+    ERROR_LOG_DIR, f"error-{date_str}.log"
+)
+
+
 
 # ------------------ FORMATTER ------------------ #
 formatter = logging.Formatter(
@@ -23,7 +42,6 @@ access_handler = TimedRotatingFileHandler(
     ACCESS_LOG_FILE,
     when="midnight",
     interval=1,
-    backupCount=7,
     encoding="utf-8"
 )
 access_handler.setFormatter(formatter)
@@ -34,7 +52,6 @@ error_handler = TimedRotatingFileHandler(
     ERROR_LOG_FILE,
     when="midnight",
     interval=1,
-    backupCount=7,
     encoding="utf-8"
 )
 error_handler.setFormatter(formatter)
