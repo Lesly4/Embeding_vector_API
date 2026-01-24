@@ -2,37 +2,36 @@ name: Deploy FastAPI to VM
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up SSH
+      - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to VM
+      - name: Deploy
         run: |
           ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
-            cd ~/fastapi_project || exit 1
-
+            set -e
+            cd ~/fastapi_project
             git pull origin main
 
-            docker stop fastapi_app || true
-            docker rm fastapi_app || true
+            if [ ! -d env ]; then
+              python3 -m venv env
+            fi
 
-            docker build -t fastapi_app .
-            docker run -d \
-              --name fastapi_app \
-              -p 8000:8000 \
-              fastapi_app
+            source env/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            sudo systemctl restart fastapi
           EOF
