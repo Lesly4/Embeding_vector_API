@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LOG_DIR="/home/ltsoptio/fastapi_project/logs"
+LOG_DIR="/home/ltsoptio/fastapi_project/Src/logs"
 CRON_LOG_DIR="$LOG_DIR/cron"
 CRON_LOG="$CRON_LOG_DIR/cleanup.log"
 
