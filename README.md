@@ -51,6 +51,7 @@ POST /convert-text
 ```bash
 git clone https://github.com/Lesly4/Embeding_vector_API.git
 cd Embeding_vector_API
+cd Src
 ```
 
 ### 2. Create & activate a virtual environment
@@ -89,6 +90,7 @@ Docker allows you to run the API without installing Python or dependencies local
 ```bash
 git clone https://github.com/Lesly4/Embeding_vector_API.git
 cd Embeding_vector_API
+cd Src
 ```
 
 ### 2. Build the Docker image
