@@ -1,30 +1,23 @@
 #  Text-to-Vector Embedding API
 
-A simple and efficient FastAPI service for converting any length of text into a vector embedding.
-
+A FastAPI service for converting text of any length (JSON, plain text, PDF) into vector embeddings for semantic search applications.
 ---
 
 ##  Overview
 
-This API allows you to convert arbitrary-length text into vector embeddings.
-It is designed to be:
+This API allows you to:
 
-*  **Easy to use**
-*  **Fast** (powered by FastAPI)
-*  **Flexible** (supports JSON, plain text, and PDF inputs)
+* Convert arbitrary-length text into vector embeddings.
+* Process JSON, plain text, and PDF inputs.
+* Handle large documents efficiently with chunking and batching.
+* Automatically log requests, responses, and errors for auditing.
 
-Ideal for semantic search, or any workflow requiring text embeddings.
+Key features:
 
-This API includes middleware that logs each request.
-
-Logged data includes:
-
-* HTTP method & URL
-* Status code
-* Timestamps
-* Client IP address 
-
-Useful for debugging and auditing.
+* **Fast** — powered by FastAPI and PyTorch.
+* **Flexible** — supports multiple input formats.
+* **Robust** — middleware limits request size and handles errors gracefully.
+* **Maintained** — logs are rotated daily, and old logs can be automatically cleaned via cron jobs.
 
 ---
 
@@ -195,13 +188,6 @@ You can submit requests from the terminal using **`curl`**, use **Postman** for 
 
 ## Calling the `/convert-text` Endpoint Using curl
 
-```bash
-curl -X POST "http://localhost:8000/convert-text" \
-     -H "Content-Type: application/json" \
-     -H "My-API-Key: your-api-key-value-here" \
-     -d @text.json
-```
-
 
 
 ### JSON Input
@@ -214,7 +200,7 @@ Create `text.json`:
 }
 ```
 
-Send with curl:
+Send request with curl:
 
 ```bash
 curl -X POST "http://localhost:8000/convert-text" \
@@ -324,7 +310,48 @@ http://localhost:8000/docs
 
 ---
 
+##  Output Structure
 
+The API returns:
+
+```json
+{
+  "Number_chunks": 5,
+  "Embedding_dim": 768,
+  "Chunks": [
+    {
+      "Chunk_index": 0,
+      "Text": "First chunk text",
+      "Number_characters": 1234,
+      "Number_bytes": 2345,
+      "Metadata": {"page": 1, "header": "Introduction"},
+      "Embedding": [0.0012, 0.235, ...]
+    },
+    ...
+  ]
+}
+```
+
+* Each chunk contains text, character count, byte size, optional metadata, and its embedding vector.
+
+* Embeddings are computed in batches and averaged per chunk for efficiency.
+--- 
+
+## Logging & Maintenance
+
+* Access Logs: stored in logs/access/
+
+* Error Logs: stored in logs/error/
+
+* Cron Logs: stored in logs/cron/
+
+Automated Cleanup: logs older than 30 days can be deleted automatically via a cron job.
+Sample cleanup command:
+
+```bash
+bash cleanup_logs.sh
+```
+---
 
 ##  Architecture Diagram
 
